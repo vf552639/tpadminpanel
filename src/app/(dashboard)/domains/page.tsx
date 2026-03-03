@@ -49,11 +49,15 @@ export default function DomainsPage() {
         }
     };
 
+    // We only want to fetch on mount automatically. After that, only on submit
     useEffect(() => {
-        // Reset to page 1 when filters change
         fetchDomains(filters, 1);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters]);
+    }, []); // Removed `filters` from dependencies
+
+    const handleSubmit = (currentFilters: FilterState) => {
+        fetchDomains(currentFilters, 1);
+    };
 
     const handleExport = () => {
         const params = new URLSearchParams();
@@ -84,6 +88,7 @@ export default function DomainsPage() {
             <FilterPanel
                 filters={filters}
                 onFilterChange={setFilters}
+                onSubmit={handleSubmit}
                 onExport={handleExport}
             />
 

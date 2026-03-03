@@ -21,10 +21,11 @@ export interface FilterState {
 interface FilterPanelProps {
     filters: FilterState;
     onFilterChange: (filters: FilterState) => void;
+    onSubmit: (filters: FilterState) => void;
     onExport: () => void;
 }
 
-export function FilterPanel({ filters, onFilterChange, onExport }: FilterPanelProps) {
+export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: FilterPanelProps) {
     const handleChange = (key: keyof FilterState, value: any) => {
         onFilterChange({ ...filters, [key]: value });
     };
@@ -91,9 +92,12 @@ export function FilterPanel({ filters, onFilterChange, onExport }: FilterPanelPr
                     />
                 </div>
 
-                {/* Export Button */}
-                <div className="flex items-end h-full">
-                    <Button onClick={onExport} variant="secondary" className="w-full">
+                {/* Actions Button */}
+                <div className="flex gap-2 items-end h-[72px]">
+                    <Button onClick={() => onSubmit(filters)} className="w-full h-[40px]">
+                        Submit
+                    </Button>
+                    <Button onClick={onExport} variant="secondary" className="w-full h-[40px]">
                         Export CSV
                     </Button>
                 </div>

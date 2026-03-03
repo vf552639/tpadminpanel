@@ -93,12 +93,12 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
                 </div>
 
                 {/* Actions Button */}
-                <div className="flex gap-2 items-end h-[72px]">
-                    <Button onClick={() => onSubmit(filters)} className="w-full h-[40px]">
-                        Submit
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-end lg:pt-6">
+                    <Button onClick={() => onSubmit(filters)} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                        Apply Filters
                     </Button>
-                    <Button onClick={onExport} variant="secondary" className="w-full h-[40px]">
-                        Export CSV
+                    <Button onClick={onExport} variant="outline" className="w-full">
+                        Download CSV
                     </Button>
                 </div>
             </div>

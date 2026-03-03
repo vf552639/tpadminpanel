@@ -39,6 +39,13 @@ export async function GET(request: Request) {
         // Process output for onlyRoot if we need to do it post-query (though SQL handles it better)
         // Assuming SQL RPC doesn't have the LIKE filter built-in as per TS ("Optional: SQL filtering for subdomains")
         let results = data || [];
+
+        // Ensure results is an array in case RPC returns something else entirely
+        if (!Array.isArray(results)) {
+            console.warn("RPC did not return an array. Data:", results);
+            results = [];
+        }
+
         let totalCount = results.length > 0 ? results[0].total_count : 0;
 
         // A brute force fallback filter on server side if RPC doesn't have `NOT LIKE '%.%.%'`
@@ -47,7 +54,7 @@ export async function GET(request: Request) {
             // If a dot appears more than once, roughly a subdomain, except some known TLDs.
             // Easiest is to rely on SQL for exactness, but we apply a simple JS filter for display correctness if SQL skipped it
             results = results.filter((row: any) => {
-                const parts = row.domain.split('.');
+                const parts = (row.domain || "").split('.');
                 // Check for common ccTLDs like .co.uk, .com.br
                 const isLongTld = parts.length >= 3 && parts[parts.length - 2].length <= 3 && parts[parts.length - 1].length <= 3;
 
@@ -62,7 +69,7 @@ export async function GET(request: Request) {
         return NextResponse.json({
             data: results.map((row: any) => {
                 // Remove the meta total_count field from each row for cleanliness
-                const { total_count, ...rest } = row;
+                const { total_count, ...rest } = row || {};
                 return rest;
             }),
             pagination: {

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select';
 
 export interface FilterState {
-    minReviews: number;
+    minReviews: string;
     minRating: string;
     status: string;
     country: string;
@@ -39,8 +39,9 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
                     <Input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={filters.minReviews}
-                        onChange={(e) => handleChange('minReviews', parseInt(e.target.value) || 0)}
+                        onChange={(e) => handleChange('minReviews', e.target.value)}
                     />
                 </div>
 
@@ -97,24 +98,27 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
                     <Button onClick={() => onSubmit(filters)} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                         Apply Filters
                     </Button>
-                    <Button onClick={onExport} variant="outline" className="w-full">
-                        Download CSV
-                    </Button>
                 </div>
             </div>
 
-            <div className="flex items-center space-x-2 pt-2 border-t">
-                <Checkbox
-                    id="root-domains"
-                    checked={filters.onlyRoot}
-                    onCheckedChange={(checked) => handleChange('onlyRoot', !!checked)}
-                />
-                <label
-                    htmlFor="root-domains"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                    Show only root domains (hide subdomains like shop.brand.com)
-                </label>
+            <div className="flex gap-4 justify-between items-center pt-2 border-t">
+                <div className="flex items-center space-x-2">
+                    <Checkbox
+                        id="root-domains"
+                        checked={filters.onlyRoot}
+                        onCheckedChange={(checked) => handleChange('onlyRoot', !!checked)}
+                    />
+                    <label
+                        htmlFor="root-domains"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                        Show only root domains (hide subdomains like shop.brand.com)
+                    </label>
+                </div>
+
+                <Button onClick={onExport} variant="outline" size="sm">
+                    Export CSV
+                </Button>
             </div>
         </div>
     );

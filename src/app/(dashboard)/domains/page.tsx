@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function DomainsPage() {
     const [filters, setFilters] = useState<FilterState>({
-        minReviews: 0,
+        minReviews: "",
         minRating: "0",
         status: "all",
         country: "",
@@ -29,7 +29,8 @@ export default function DomainsPage() {
                 onlyRoot: currentFilters.onlyRoot.toString()
             });
 
-            if (currentFilters.minReviews > 0) params.append('minReviews', currentFilters.minReviews.toString());
+            const numReviews = parseInt(currentFilters.minReviews) || 0;
+            if (numReviews > 0) params.append('minReviews', numReviews.toString());
             if (currentFilters.minRating !== "0") params.append('minRating', currentFilters.minRating);
             if (currentFilters.status !== "all") params.append('status', currentFilters.status);
             if (currentFilters.country) params.append('country', currentFilters.country);
@@ -61,7 +62,8 @@ export default function DomainsPage() {
 
     const handleExport = () => {
         const params = new URLSearchParams();
-        if (filters.minReviews > 0) params.append('minReviews', filters.minReviews.toString());
+        const numReviews = parseInt(filters.minReviews) || 0;
+        if (numReviews > 0) params.append('minReviews', numReviews.toString());
         if (filters.minRating !== "0") params.append('minRating', filters.minRating);
         if (filters.status !== "all") params.append('status', filters.status);
         if (filters.country) params.append('country', filters.country);

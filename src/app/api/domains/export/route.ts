@@ -31,6 +31,10 @@ export async function GET(request: Request) {
         if (error) throw error;
 
         let results = data || [];
+        if (!Array.isArray(results)) {
+            console.warn("RPC returned non-array for export:", results);
+            results = [];
+        }
 
         // Format as CSV
         const headers = ['domain', 'rating', 'reviews_count', 'status', 'country_code', 'expiry_date', 'created_at'];

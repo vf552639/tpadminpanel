@@ -16,6 +16,7 @@ export async function GET(request: Request) {
         const status = searchParams.get('status') || null;
         const country = searchParams.get('country') || null;
         const categoryId = searchParams.get('categoryId') ? parseInt(searchParams.get('categoryId')!) : null;
+        const tld = searchParams.get('tld') || null;
 
         // Use RPC to fetch up to MAX_EXPORT
         const { data, error } = await supabase.rpc('filter_domains', {
@@ -25,7 +26,8 @@ export async function GET(request: Request) {
             p_country: country,
             p_category_id: categoryId,
             p_page: 1,
-            p_per_page: MAX_EXPORT
+            p_per_page: MAX_EXPORT,
+            p_tld: tld
         });
 
         if (error) throw error;

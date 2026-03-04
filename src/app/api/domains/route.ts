@@ -18,6 +18,14 @@ export async function GET(request: Request) {
         const country = searchParams.get('country') || null;
         const categoryId = searchParams.get('categoryId') ? parseInt(searchParams.get('categoryId')!) : null;
         const onlyRoot = searchParams.get('onlyRoot') !== 'false'; // true by default
+        const tld = searchParams.get('tld') || null;
+
+        const sortBy = searchParams.get('sortBy') || null;
+        const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+        const ALLOWED_SORT_COLUMNS = ['rating', 'reviews_count'];
+        const validSortBy = ALLOWED_SORT_COLUMNS.includes(sortBy || '') ? sortBy : null;
+        const validSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
 
         // Call the RPC function defined in Supabase
         const { data, error } = await supabase.rpc('filter_domains', {
@@ -27,7 +35,10 @@ export async function GET(request: Request) {
             p_country: country,
             p_category_id: categoryId,
             p_page: page,
-            p_per_page: perPage
+            p_per_page: perPage,
+            p_tld: tld,
+            p_sort_by: validSortBy,
+            p_sort_order: validSortOrder
         });
 
         if (error) {

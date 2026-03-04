@@ -6,6 +6,13 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface Domain {
     domain: string;
@@ -20,9 +27,13 @@ interface Domain {
 interface DomainTableProps {
     data: Domain[];
     loading: boolean;
+    sortBy: string | null;
+    sortOrder: 'asc' | 'desc';
+    onSort: (column: string) => void;
+    onStatusChange: (domain: string, newStatus: string) => void;
 }
 
-export function DomainTable({ data, loading }: DomainTableProps) {
+export function DomainTable({ data, loading, sortBy, sortOrder, onSort, onStatusChange }: DomainTableProps) {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'available': return 'text-green-600 bg-green-50 border-green-200';
@@ -34,14 +45,29 @@ export function DomainTable({ data, loading }: DomainTableProps) {
         }
     };
 
+    const SortIcon = ({ column }: { column: string }) => {
+        if (sortBy !== column) return <span className="ml-1 text-muted-foreground/40">↕</span>;
+        return <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+    };
+
     return (
         <div className="border rounded-md bg-white overflow-hidden">
             <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead>Domain</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>Reviews</TableHead>
+                        <TableHead
+                            className="cursor-pointer select-none hover:text-foreground"
+                            onClick={() => onSort('rating')}
+                        >
+                            Rating <SortIcon column="rating" />
+                        </TableHead>
+                        <TableHead
+                            className="cursor-pointer select-none hover:text-foreground"
+                            onClick={() => onSort('reviews_count')}
+                        >
+                            Reviews <SortIcon column="reviews_count" />
+                        </TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Country</TableHead>
                         <TableHead>Added</TableHead>
@@ -73,9 +99,21 @@ export function DomainTable({ data, loading }: DomainTableProps) {
                                 </TableCell>
                                 <TableCell>{row.reviews_count}</TableCell>
                                 <TableCell>
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(row.status)}`}>
-                                        {row.status}
-                                    </span>
+                                    <Select
+                                        value={row.status}
+                                        onValueChange={(val) => onStatusChange(row.domain, val)}
+                                    >
+                                        <SelectTrigger className={`h-7 w-[130px] text-xs font-medium border ${getStatusColor(row.status)}`}>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="new">New</SelectItem>
+                                            <SelectItem value="available">Available</SelectItem>
+                                            <SelectItem value="unavailable">Unavailable</SelectItem>
+                                            <SelectItem value="error">Error</SelectItem>
+                                            <SelectItem value="blacklisted">Blacklisted</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </TableCell>
                                 <TableCell>{row.country_code || '-'}</TableCell>
                                 <TableCell className="text-muted-foreground text-sm">

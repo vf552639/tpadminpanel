@@ -16,6 +16,7 @@ export interface FilterState {
     country: string;
     categoryId: string;
     onlyRoot: boolean;
+    tld: string;
 }
 
 interface FilterPanelProps {
@@ -32,7 +33,7 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
 
     return (
         <div className="bg-white p-4 rounded-lg border shadow-sm space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 {/* Min Reviews */}
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Min Reviews</label>
@@ -90,6 +91,17 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
                         placeholder="e.g. US, UK"
                         value={filters.country}
                         onChange={(e) => handleChange('country', e.target.value.toUpperCase())}
+                    />
+                </div>
+
+                {/* TLD Filter */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Domain Extension</label>
+                    <Input
+                        type="text"
+                        placeholder="e.g. .com, .de"
+                        value={filters.tld}
+                        onChange={(e) => handleChange('tld', e.target.value.toLowerCase().trim())}
                     />
                 </div>
 

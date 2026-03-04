@@ -13,14 +13,23 @@ export default function DomainsPage() {
         status: "all",
         country: "",
         categoryId: "",
-        onlyRoot: true
+        onlyRoot: true,
+        tld: ""
     });
 
-    const [data, setData] = useState([]);
+    const [sortBy, setSortBy] = useState<string | null>(null);
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({ page: 1, perPage: 50, total: 0, totalPages: 0 });
 
-    const fetchDomains = async (currentFilters: FilterState, page: number) => {
+    const fetchDomains = async (
+        currentFilters: FilterState,
+        page: number,
+        currentSortBy?: string | null,
+        currentSortOrder?: 'asc' | 'desc'
+    ) => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
@@ -35,6 +44,12 @@ export default function DomainsPage() {
             if (currentFilters.status !== "all") params.append('status', currentFilters.status);
             if (currentFilters.country) params.append('country', currentFilters.country);
             if (currentFilters.categoryId) params.append('categoryId', currentFilters.categoryId);
+            if (currentFilters.tld) params.append('tld', currentFilters.tld);
+
+            const sBy = currentSortBy !== undefined ? currentSortBy : sortBy;
+            const sOrd = currentSortOrder !== undefined ? currentSortOrder : sortOrder;
+            if (sBy) params.append('sortBy', sBy);
+            if (sBy) params.append('sortOrder', sOrd || 'desc');
 
             const res = await fetch(`/api/domains?${params.toString()}`);
             if (!res.ok) throw new Error('Failed to fetch domains');
@@ -60,6 +75,40 @@ export default function DomainsPage() {
         fetchDomains(currentFilters, 1);
     };
 
+    const handleSort = (column: string) => {
+        let newOrder: 'asc' | 'desc' = 'desc';
+        if (sortBy === column) {
+            newOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+        }
+        setSortBy(column);
+        setSortOrder(newOrder);
+        fetchDomains(filters, 1, column, newOrder);
+    };
+
+    const handleStatusChange = async (domain: string, newStatus: string) => {
+        try {
+            const res = await fetch('/api/domains/status', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domain, status: newStatus })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                console.error('Status update failed:', err);
+                return;
+            }
+
+            setData((prev: any[]) =>
+                prev.map((row: any) =>
+                    row.domain === domain ? { ...row, status: newStatus } : row
+                )
+            );
+        } catch (error) {
+            console.error('Failed to update status:', error);
+        }
+    };
+
     const handleExport = () => {
         const params = new URLSearchParams();
         const numReviews = parseInt(filters.minReviews) || 0;
@@ -68,6 +117,7 @@ export default function DomainsPage() {
         if (filters.status !== "all") params.append('status', filters.status);
         if (filters.country) params.append('country', filters.country);
         if (filters.categoryId) params.append('categoryId', filters.categoryId);
+        if (filters.tld) params.append('tld', filters.tld);
 
         window.open(`/api/domains/export?${params.toString()}`, '_blank');
     };
@@ -124,7 +174,14 @@ export default function DomainsPage() {
                     </div>
                 </div>
 
-                <DomainTable data={data} loading={loading} />
+                <DomainTable
+                    data={data}
+                    loading={loading}
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSort={handleSort}
+                    onStatusChange={handleStatusChange}
+                />
             </div>
         </div>
     );

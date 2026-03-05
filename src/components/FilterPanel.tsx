@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,7 +12,8 @@ import {
 
 export interface FilterState {
     minReviews: string;
-    minRating: string;
+    ratingMin: string;
+    ratingMax: string;
     status: string;
     country: string;
     categoryId: string;
@@ -27,6 +29,8 @@ interface FilterPanelProps {
 }
 
 export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: FilterPanelProps) {
+    const [customRating, setCustomRating] = useState(false);
+
     const handleChange = (key: keyof FilterState, value: any) => {
         onFilterChange({ ...filters, [key]: value });
     };
@@ -46,22 +50,98 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
                     />
                 </div>
 
-                {/* Min Rating */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Min Rating</label>
-                    <Select value={filters.minRating} onValueChange={(val) => handleChange('minRating', val)}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="0">Any</SelectItem>
-                            <SelectItem value="1">1.0+</SelectItem>
-                            <SelectItem value="2">2.0+</SelectItem>
-                            <SelectItem value="3">3.0+</SelectItem>
-                            <SelectItem value="4">4.0+</SelectItem>
-                            <SelectItem value="4.5">4.5+</SelectItem>
-                        </SelectContent>
-                    </Select>
+                {/* Rating Filter */}
+                <div className="space-y-3 lg:col-span-2">
+                    <label className="text-sm font-medium">Rating Range</label>
+
+                    {/* Row 1 */}
+                    <div className="flex flex-wrap gap-1">
+                        {[
+                            { label: 'Any', min: '0', max: '' },
+                            { label: '1.0+', min: '1', max: '' },
+                            { label: '2.0+', min: '2', max: '' },
+                            { label: '3.0+', min: '3', max: '' },
+                            { label: '4.0+', min: '4', max: '' },
+                            { label: '4.5+', min: '4.5', max: '' },
+                        ].map((preset) => (
+                            <Button
+                                key={preset.label}
+                                size="sm"
+                                variant={
+                                    filters.ratingMin === preset.min && filters.ratingMax === preset.max
+                                        ? 'default'
+                                        : 'outline'
+                                }
+                                onClick={() => {
+                                    handleChange('ratingMin', preset.min);
+                                    handleChange('ratingMax', preset.max);
+                                    setCustomRating(false);
+                                }}
+                            >
+                                {preset.label}
+                            </Button>
+                        ))}
+                    </div>
+
+                    {/* Row 2 */}
+                    <div className="flex flex-wrap gap-1">
+                        {[
+                            { label: '3.5–4.0', min: '3.5', max: '4.0' },
+                            { label: '4.0–4.5', min: '4.0', max: '4.5' },
+                            { label: '4.5–5.0', min: '4.5', max: '5.0' },
+                        ].map((preset) => (
+                            <Button
+                                key={preset.label}
+                                size="sm"
+                                variant={
+                                    filters.ratingMin === preset.min && filters.ratingMax === preset.max
+                                        ? 'default'
+                                        : 'outline'
+                                }
+                                onClick={() => {
+                                    handleChange('ratingMin', preset.min);
+                                    handleChange('ratingMax', preset.max);
+                                    setCustomRating(false);
+                                }}
+                            >
+                                {preset.label}
+                            </Button>
+                        ))}
+                        <Button
+                            size="sm"
+                            variant={customRating ? 'default' : 'outline'}
+                            onClick={() => setCustomRating(!customRating)}
+                        >
+                            Custom
+                        </Button>
+                    </div>
+
+                    {/* Custom Inputs */}
+                    {customRating && (
+                        <div className="flex gap-2 items-center">
+                            <Input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="5"
+                                placeholder="From"
+                                value={filters.ratingMin}
+                                onChange={(e) => handleChange('ratingMin', e.target.value)}
+                                className="w-20 h-8"
+                            />
+                            <span className="text-muted-foreground">–</span>
+                            <Input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="5"
+                                placeholder="To"
+                                value={filters.ratingMax}
+                                onChange={(e) => handleChange('ratingMax', e.target.value)}
+                                className="w-20 h-8"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Status */}

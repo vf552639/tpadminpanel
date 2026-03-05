@@ -14,6 +14,7 @@ export async function GET(request: Request) {
         // Extract filters
         const minReviews = parseInt(searchParams.get('minReviews') || '0');
         const minRating = parseFloat(searchParams.get('minRating') || '0');
+        const maxRating = searchParams.get('maxRating') ? parseFloat(searchParams.get('maxRating')!) : null;
         const status = searchParams.get('status') || null;
         const country = searchParams.get('country') || null;
         const categoryId = searchParams.get('categoryId') ? parseInt(searchParams.get('categoryId')!) : null;
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
         const { data, error } = await supabase.rpc('filter_domains', {
             p_min_reviews: minReviews,
             p_min_rating: minRating,
+            p_max_rating: maxRating,
             p_status: status,
             p_country: country,
             p_category_id: categoryId,

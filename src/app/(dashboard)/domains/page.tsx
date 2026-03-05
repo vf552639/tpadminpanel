@@ -9,7 +9,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 export default function DomainsPage() {
     const [filters, setFilters] = useState<FilterState>({
         minReviews: "",
-        minRating: "0",
+        ratingMin: "0",
+        ratingMax: "",
         status: "all",
         country: "",
         categoryId: "",
@@ -40,7 +41,8 @@ export default function DomainsPage() {
 
             const numReviews = parseInt(currentFilters.minReviews) || 0;
             if (numReviews > 0) params.append('minReviews', numReviews.toString());
-            if (currentFilters.minRating !== "0") params.append('minRating', currentFilters.minRating);
+            if (currentFilters.ratingMin !== "0") params.append('minRating', currentFilters.ratingMin);
+            if (currentFilters.ratingMax) params.append('maxRating', currentFilters.ratingMax);
             if (currentFilters.status !== "all") params.append('status', currentFilters.status);
             if (currentFilters.country) params.append('country', currentFilters.country);
             if (currentFilters.categoryId) params.append('categoryId', currentFilters.categoryId);
@@ -113,7 +115,8 @@ export default function DomainsPage() {
         const params = new URLSearchParams();
         const numReviews = parseInt(filters.minReviews) || 0;
         if (numReviews > 0) params.append('minReviews', numReviews.toString());
-        if (filters.minRating !== "0") params.append('minRating', filters.minRating);
+        if (filters.ratingMin !== "0") params.append('minRating', filters.ratingMin);
+        if (filters.ratingMax) params.append('maxRating', filters.ratingMax);
         if (filters.status !== "all") params.append('status', filters.status);
         if (filters.country) params.append('country', filters.country);
         if (filters.categoryId) params.append('categoryId', filters.categoryId);

@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION filter_domains(
     p_min_reviews INT DEFAULT 0,
     p_min_rating NUMERIC DEFAULT 0,
+    p_max_rating NUMERIC DEFAULT NULL,
     p_status TEXT DEFAULT NULL,
     p_country TEXT DEFAULT NULL,
     p_category_id INT DEFAULT NULL,
@@ -36,6 +37,15 @@ BEGIN
         WHERE 
             (p_min_reviews = 0 OR d.reviews_count >= p_min_reviews)
             AND (p_min_rating = 0 OR d.rating >= p_min_rating)
+            AND (
+                p_max_rating IS NULL 
+                OR (
+                    CASE 
+                        WHEN p_max_rating >= 5.0 THEN d.rating <= p_max_rating
+                        ELSE d.rating < p_max_rating
+                    END
+                )
+            )
             AND (p_status IS NULL OR p_status = 'all' OR d.status = p_status)
             AND (p_country IS NULL OR p_country = '' OR d.country_code = p_country)
             AND (p_category_id IS NULL OR d.category_id = p_category_id)

@@ -12,26 +12,32 @@ CREATE OR REPLACE FUNCTION filter_domains(
     p_sort_order TEXT DEFAULT 'desc'
 )
 RETURNS TABLE (
+    id BIGINT,
     domain TEXT,
     rating NUMERIC,
     reviews_count INT,
     status TEXT,
     country_code TEXT,
-    expiry_date TIMESTAMPTZ,
+    category_id INT,
+    expiry_date TEXT,
     created_at TIMESTAMPTZ,
+    update_at TIMESTAMPTZ,
     total_count BIGINT
 ) AS $$
 BEGIN
     RETURN QUERY 
     WITH filtered AS (
         SELECT 
+            d.id,
             d.domain,
             d.rating,
             d.reviews_count,
             d.status,
             d.country_code,
-            d.expiry_date,
+            d.category_id,
+            d.expiry_date::TEXT,
             d.created_at,
+            d.update_at,
             COUNT(*) OVER() AS total_count
         FROM domains d
         WHERE 

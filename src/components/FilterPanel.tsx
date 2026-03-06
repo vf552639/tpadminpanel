@@ -35,6 +35,11 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
         onFilterChange({ ...filters, [key]: value });
     };
 
+    // FIX: Update multiple filter fields in a single state update
+    const handleMultiChange = (updates: Partial<FilterState>) => {
+        onFilterChange({ ...filters, ...updates });
+    };
+
     return (
         <div className="bg-white p-4 rounded-lg border shadow-sm space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -73,8 +78,10 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
                                         : 'outline'
                                 }
                                 onClick={() => {
-                                    handleChange('ratingMin', preset.min);
-                                    handleChange('ratingMax', preset.max);
+                                    handleMultiChange({
+                                        ratingMin: preset.min,
+                                        ratingMax: preset.max,
+                                    });
                                     setCustomRating(false);
                                 }}
                             >
@@ -99,8 +106,10 @@ export function FilterPanel({ filters, onFilterChange, onSubmit, onExport }: Fil
                                         : 'outline'
                                 }
                                 onClick={() => {
-                                    handleChange('ratingMin', preset.min);
-                                    handleChange('ratingMax', preset.max);
+                                    handleMultiChange({
+                                        ratingMin: preset.min,
+                                        ratingMax: preset.max,
+                                    });
                                     setCustomRating(false);
                                 }}
                             >

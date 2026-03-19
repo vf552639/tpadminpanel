@@ -10,9 +10,12 @@ export type TpResolvedData = {
   domain_id: number | null;
   business_name: string | null;
   rating: number | null;
+  reviews: number | null;
   reviews_count: number | null;
   category_slug: string | null;
   category_id: number | null;
+  category_level: number | null;
+  parent_chain: Array<{ id: number; name: string; slug: string; level: number }>;
   country_code: string | null;
   tp_url: string;
 };

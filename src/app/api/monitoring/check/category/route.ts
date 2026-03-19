@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     if (card.is_active === false) return NextResponse.json({ error: 'Card is paused' }, { status: 400 });
 
     const category_slug = String(card.category_slug || '').trim();
-    const country_code = String(card.country_code || '').trim().toUpperCase();
+    const country_code = String(card.country_code || '').trim().toLowerCase();
     if (!category_slug || !country_code) {
       return NextResponse.json(
         { error: 'category_slug and country_code are required to check Trustpilot category position' },
@@ -80,10 +80,19 @@ export async function POST(request: Request) {
     let position: number | null = null;
     let total_scanned = 0;
 
+    const [{ data: countryRow }, { data: categoryRow }] = await Promise.all([
+      supabase.from('countries').select('base_url').eq('cn_code', country_code).maybeSingle(),
+      card.category_id
+        ? supabase.from('categories').select('level,category_name').eq('id', card.category_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    const baseUrl = String(countryRow?.base_url || 'https://www.trustpilot.com').replace(/\/+$/, '');
+    const checkedLevel = Number(categoryRow?.level || 0) || null;
+    const categoryName = categoryRow?.category_name ? String(categoryRow.category_name) : null;
+
     for (let page = 1; page <= MAX_PAGES; page++) {
-      const url = `https://www.trustpilot.com/categories/${encodeURIComponent(
-        category_slug
-      )}?country=${encodeURIComponent(country_code)}&page=${page}`;
+      const url = `${baseUrl}/categories/${encodeURIComponent(category_slug)}?page=${page}`;
       const html = await fetchPage(url);
       const domains = extractReviewDomains(html);
 
@@ -115,11 +124,13 @@ export async function POST(request: Request) {
     const { error: insErr } = await supabase.from('category_position_history').insert({
       card_id: cardId,
       category_slug,
+      category_name: categoryName,
       country_code,
       position,
       total_scanned,
       rating_at_check,
       reviews_at_check,
+      checked_level: checkedLevel,
       checked_at,
     });
 

@@ -8,9 +8,12 @@ type ResolveResult = {
   domain_id: number | null;
   business_name: string | null;
   rating: number | null;
+  reviews: number | null;
   reviews_count: number | null;
   category_slug: string | null;
   category_id: number | null;
+  category_level: number | null;
+  parent_chain: Array<{ id: number; name: string; slug: string; level: number }>;
   country_code: string | null;
   tp_url: string;
 };
@@ -79,7 +82,7 @@ function pickBusinessNode(nodes: any[]): any | null {
 
 function extractCategorySlug(html: string): string | null {
   // Try to find "/categories/<slug>" links
-  const catRe = /href=["']\/categories\/([a-z0-9_]+)["']/gi;
+  const catRe = /href=["']\/categories\/([a-z0-9_-]+)["']/gi;
   let m: RegExpExecArray | null;
   while ((m = catRe.exec(html))) {
     if (m[1]) return m[1];
@@ -162,7 +165,7 @@ export async function POST(request: Request) {
     const categorySlug = extractCategorySlug(html);
     const resolvedCountryCode = (countryFromUrl || countryFromJson || 'usa/global').toLowerCase();
 
-    const [domainRow, categoryRow] = await Promise.all([
+    const [domainRow, categoryRows] = await Promise.all([
       supabase
         .from('domains')
         .select('id,category_id,domain')
@@ -171,24 +174,62 @@ export async function POST(request: Request) {
       categorySlug
         ? supabase
             .from('categories')
-            .select('*')
+            .select('id,country,level,category_name,category_slug,parent_id')
             .eq('country', resolvedCountryCode)
-            .eq('display_category_slug', categorySlug)
-            .maybeSingle()
+            .eq('category_slug', categorySlug)
         : Promise.resolve({ data: null, error: null }),
     ]);
 
     const domainData = domainRow.data;
-    const categoryData = categoryRow && 'data' in categoryRow ? (categoryRow as any).data : null;
+    const categoryCandidates =
+      categoryRows && 'data' in categoryRows && Array.isArray((categoryRows as any).data)
+        ? ((categoryRows as any).data as Array<{
+            id: number;
+            level: number | null;
+            category_name: string;
+            category_slug: string;
+            parent_id: number | null;
+          }>)
+        : [];
+
+    const categoryData = [...categoryCandidates].sort((a, b) => (b.level || 0) - (a.level || 0))[0] || null;
+
+    const parentChain: Array<{ id: number; name: string; slug: string; level: number }> = [];
+    if (categoryData?.parent_id) {
+      const visited = new Set<number>();
+      let currentParentId: number | null = categoryData.parent_id;
+      for (let i = 0; i < 5 && currentParentId; i++) {
+        if (visited.has(currentParentId)) break;
+        visited.add(currentParentId);
+
+        const { data: parentRow } = await supabase
+          .from('categories')
+          .select('id,level,category_name,category_slug,parent_id')
+          .eq('id', currentParentId)
+          .maybeSingle();
+        if (!parentRow) break;
+
+        parentChain.push({
+          id: parentRow.id,
+          name: parentRow.category_name,
+          slug: parentRow.category_slug,
+          level: parentRow.level || 0,
+        });
+        currentParentId = parentRow.parent_id ?? null;
+      }
+    }
 
     const result: ResolveResult = {
       domain: domainFromUrl,
       domain_id: domainData?.id ?? null,
       business_name: businessName,
       rating,
+      reviews,
       reviews_count: reviews,
       category_slug: categorySlug || null,
       category_id: categoryData?.id ?? domainData?.category_id ?? null,
+      category_level: categoryData?.level ?? null,
+      parent_chain: parentChain,
       country_code: resolvedCountryCode || null,
       tp_url: url.toString(),
     };

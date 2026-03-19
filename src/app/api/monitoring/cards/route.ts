@@ -10,6 +10,9 @@ type MonitoredCardRow = {
   category_id: number | null;
   category_slug: string | null;
   country_code: string | null;
+  monitoring_depth: 'own' | 'parent' | 'all' | null;
+  initial_rating: number | null;
+  initial_reviews: number | null;
   keywords: string[] | null;
   language_code: string | null;
   location_code: number | null;
@@ -47,10 +50,10 @@ export async function GET() {
       cardIds.length
         ? supabase
             .from('category_position_history')
-            .select('card_id,position,checked_at')
+            .select('card_id,checked_level,position,category_name,checked_at')
             .in('card_id', cardIds)
             .order('checked_at', { ascending: false })
-            .limit(500)
+            .limit(3000)
         : Promise.resolve({ data: [], error: null } as any),
     ]);
 
@@ -63,8 +66,26 @@ export async function GET() {
     }
 
     const lastCatByCard: Record<number, any> = {};
+    const lastCatByCardLevel: Record<number, any[]> = {};
     for (const row of catRes?.data || []) {
-      if (!lastCatByCard[row.card_id]) lastCatByCard[row.card_id] = row;
+      if (!lastCatByCardLevel[row.card_id]) {
+        lastCatByCardLevel[row.card_id] = [];
+      }
+      const hasLevel = lastCatByCardLevel[row.card_id].some((item) => item.checked_level === row.checked_level);
+      if (!hasLevel) {
+        lastCatByCardLevel[row.card_id].push(row);
+      }
+
+      if (!lastCatByCard[row.card_id]) {
+        lastCatByCard[row.card_id] = row;
+      } else {
+        const current = lastCatByCard[row.card_id];
+        const currentLevel = Number(current.checked_level || 0);
+        const nextLevel = Number(row.checked_level || 0);
+        if (nextLevel > currentLevel) {
+          lastCatByCard[row.card_id] = row;
+        }
+      }
     }
 
     return NextResponse.json({
@@ -72,6 +93,7 @@ export async function GET() {
         ...c,
         last_serp: lastSerpByCard[c.id] || null,
         last_category: lastCatByCard[c.id] || null,
+        last_category_by_level: lastCatByCardLevel[c.id] || [],
       })),
     });
   } catch (error) {
@@ -98,6 +120,12 @@ export async function POST(request: Request) {
       category_id: body.category_id ?? null,
       category_slug: body.category_slug ? String(body.category_slug).trim() : null,
       country_code: body.country_code ? String(body.country_code).trim().toLowerCase() : null,
+      monitoring_depth:
+        body.monitoring_depth === 'parent' || body.monitoring_depth === 'all' ? body.monitoring_depth : 'own',
+      initial_rating:
+        body.initial_rating !== undefined && body.initial_rating !== null ? Number(body.initial_rating) : null,
+      initial_reviews:
+        body.initial_reviews !== undefined && body.initial_reviews !== null ? Number(body.initial_reviews) : null,
       keywords,
       language_code: body.language_code ? String(body.language_code).trim() : 'en',
       location_code: body.location_code ? Number(body.location_code) : null,

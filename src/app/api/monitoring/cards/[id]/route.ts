@@ -45,6 +45,16 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
       updates.category_slug = body.category_slug ? String(body.category_slug).trim() : null;
     if (body.country_code !== undefined)
       updates.country_code = body.country_code ? String(body.country_code).trim().toLowerCase() : null;
+    if (body.monitoring_depth !== undefined) {
+      updates.monitoring_depth =
+        body.monitoring_depth === 'parent' || body.monitoring_depth === 'all' ? body.monitoring_depth : 'own';
+    }
+    if (body.initial_rating !== undefined) {
+      updates.initial_rating = body.initial_rating !== null ? Number(body.initial_rating) : null;
+    }
+    if (body.initial_reviews !== undefined) {
+      updates.initial_reviews = body.initial_reviews !== null ? Number(body.initial_reviews) : null;
+    }
     if (body.keywords !== undefined) {
       const keywords = Array.isArray(body.keywords)
         ? body.keywords.map((k: any) => String(k || '').trim()).filter((k: string) => k.length > 0)

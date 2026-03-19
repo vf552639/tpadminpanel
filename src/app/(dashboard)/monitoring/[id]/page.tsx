@@ -27,8 +27,10 @@ type SerpRow = {
 };
 
 type CatRow = {
+  category_slug: string | null;
+  category_name: string | null;
+  checked_level: number | null;
   position: number | null;
-  rating_at_check: number | null;
   checked_at: string;
 };
 
@@ -244,7 +246,9 @@ export default function MonitoringCardDetailPage({ params }: { params: { id: str
         <div className="border rounded-lg bg-white p-4 space-y-4">
           <div>
             <div className="text-lg font-semibold">Trustpilot category position</div>
-            <div className="text-sm text-muted-foreground">Position line + rating line for correlation.</div>
+            <div className="text-sm text-muted-foreground">
+              Multi-line chart by category level. Y-axis is inverted: #1 is on top.
+            </div>
           </div>
           <CategoryChart rows={cat} />
         </div>

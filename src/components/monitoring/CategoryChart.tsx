@@ -12,8 +12,10 @@ import {
 } from 'recharts';
 
 type CategoryHistoryRow = {
+  category_slug: string | null;
+  category_name: string | null;
+  checked_level: number | null;
   position: number | null;
-  rating_at_check: number | null;
   checked_at: string;
 };
 
@@ -27,18 +29,40 @@ export function CategoryChart({ rows }: { rows: CategoryHistoryRow[] }) {
     return <div className="text-sm text-muted-foreground">No category history yet.</div>;
   }
 
-  const depth = Math.max(
-    50,
-    ...rows.map((r) => (typeof r.position === 'number' ? r.position : 0))
+  const depth = Math.max(50, ...rows.map((r) => (typeof r.position === 'number' ? r.position : 0)));
+
+  const sortedRows = [...rows].sort((a, b) => +new Date(a.checked_at) - +new Date(b.checked_at));
+  const slugMeta = new Map<string, { name: string; level: number }>();
+  for (const row of sortedRows) {
+    if (!row.category_slug) continue;
+    slugMeta.set(row.category_slug, {
+      name: row.category_name || row.category_slug,
+      level: row.checked_level || 0,
+    });
+  }
+
+  const slugs = [...slugMeta.entries()]
+    .sort((a, b) => b[1].level - a[1].level)
+    .map(([slug]) => slug);
+
+  const dataMap = new Map<string, Record<string, string | number | null>>();
+  for (const row of sortedRows) {
+    const key = row.checked_at;
+    if (!dataMap.has(key)) dataMap.set(key, { checked_at: key });
+    if (row.category_slug) {
+      dataMap.get(key)![row.category_slug] = row.position;
+    }
+  }
+
+  const data = [...dataMap.values()].sort(
+    (a, b) => +new Date(String(a.checked_at)) - +new Date(String(b.checked_at))
   );
 
-  const data = rows
-    .map((r) => ({
-      checked_at: r.checked_at,
-      position: r.position ?? depth + 1,
-      rating: r.rating_at_check ?? null,
-    }))
-    .sort((a, b) => +new Date(a.checked_at) - +new Date(b.checked_at));
+  const paletteByLevel: Record<number, string> = {
+    3: '#2563eb',
+    2: '#16a34a',
+    1: '#64748b',
+  };
 
   return (
     <div className="h-[320px] w-full">
@@ -47,26 +71,34 @@ export function CategoryChart({ rows }: { rows: CategoryHistoryRow[] }) {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="checked_at" tickFormatter={(v) => new Date(v).toLocaleDateString()} minTickGap={24} />
           <YAxis
-            yAxisId="pos"
             reversed
-            domain={[1, depth + 1]}
-            tickFormatter={(v) => (v === depth + 1 ? '—' : `#${v}`)}
+            domain={[1, depth]}
+            tickFormatter={(v) => `#${v}`}
           />
-          <YAxis yAxisId="rating" orientation="right" domain={[0, 5]} tickFormatter={(v) => `${v}`} />
           <Tooltip
             formatter={(value: any, name: any) => {
-              if (name === 'position') {
-                const v = Number(value);
-                return [v === depth + 1 ? 'not found' : `#${v}`, 'position'];
-              }
-              if (name === 'rating') return [value, 'rating'];
-              return [value, name];
+              const label = slugMeta.get(String(name))?.name || name;
+              if (value === null || value === undefined) return ['not found', label];
+              return [`#${value}`, label];
             }}
             labelFormatter={(label) => formatDate(String(label))}
           />
           <Legend />
-          <Line yAxisId="pos" type="monotone" dataKey="position" stroke="#2563eb" dot={false} strokeWidth={2} />
-          <Line yAxisId="rating" type="monotone" dataKey="rating" stroke="#16a34a" dot={false} strokeWidth={2} />
+          {slugs.map((slug) => {
+            const meta = slugMeta.get(slug)!;
+            return (
+              <Line
+                key={slug}
+                type="monotone"
+                dataKey={slug}
+                name={meta.name}
+                stroke={paletteByLevel[meta.level] || '#0f172a'}
+                dot={false}
+                connectNulls={false}
+                strokeWidth={2}
+              />
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
     </div>

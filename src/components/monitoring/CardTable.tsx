@@ -15,12 +15,37 @@ export type MonitoredCardListItem = {
   is_active: boolean | null;
   keywords: string[] | null;
   last_serp: { rank_group: number | null; checked_at: string } | null;
-  last_category: { position: number | null; checked_at: string } | null;
+  last_category: {
+    position: number | null;
+    checked_at: string;
+    checked_level?: number | null;
+    category_name?: string | null;
+  } | null;
+  last_category_by_level?: Array<{
+    checked_level: number | null;
+    position: number | null;
+    category_name: string | null;
+    checked_at: string;
+  }>;
 };
 
 function fmtPos(v: number | null | undefined) {
   if (v === null || v === undefined) return '-';
   return `#${v}`;
+}
+
+function tooltipForLevels(
+  rows: Array<{
+    checked_level: number | null;
+    position: number | null;
+    category_name: string | null;
+  }> | null | undefined
+) {
+  if (!rows || rows.length === 0) return '';
+  return rows
+    .sort((a, b) => Number(b.checked_level || 0) - Number(a.checked_level || 0))
+    .map((row) => `${row.category_name || `L${row.checked_level || '?'}`}: ${fmtPos(row.position)}`)
+    .join(' | ');
 }
 
 export function CardTable({
@@ -103,7 +128,11 @@ export function CardTable({
                   <TableCell>{row.category_slug || '-'}</TableCell>
                   <TableCell>{row.country_code || '-'}</TableCell>
                   <TableCell>{fmtPos(row.last_serp?.rank_group ?? null)}</TableCell>
-                  <TableCell>{fmtPos(row.last_category?.position ?? null)}</TableCell>
+                  <TableCell>
+                    <span title={tooltipForLevels(row.last_category_by_level)}>
+                      {fmtPos(row.last_category?.position ?? null)}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${

@@ -204,12 +204,11 @@ export async function POST(request: Request) {
         if (visited.has(currentParentId)) break;
         visited.add(currentParentId);
 
-        const parentResponse = await supabase
+        const { data: parentRow }: { data: CategoryNode | null } = await supabase
           .from('categories')
           .select('id,level,category_name,category_slug,parent_id')
           .eq('id', currentParentId)
           .maybeSingle();
-        const parentRow = (parentResponse.data as CategoryNode | null) ?? null;
         if (!parentRow) break;
 
         parentChain.push({

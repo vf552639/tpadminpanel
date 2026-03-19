@@ -8,9 +8,9 @@ function parseId(params: { id?: string }) {
   return Number.isFinite(id) ? id : null;
 }
 
-export async function GET(request: Request, ctx: { params: { id: string } }) {
+export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const id = parseId(ctx.params);
+    const id = parseId(await ctx.params);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
     const { searchParams } = new URL(request.url);

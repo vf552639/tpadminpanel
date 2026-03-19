@@ -8,8 +8,8 @@ function parseId(params: { id?: string }) {
   return Number.isFinite(id) ? id : null;
 }
 
-export async function GET(_request: Request, ctx: { params: { id: string } }) {
-  const id = parseId(ctx.params);
+export async function GET(_request: Request, ctx: { params: Promise<{ id: string }> }) {
+  const id = parseId(await ctx.params);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
   const { data, error } = await supabase
@@ -27,9 +27,9 @@ export async function GET(_request: Request, ctx: { params: { id: string } }) {
   return NextResponse.json({ data });
 }
 
-export async function PATCH(request: Request, ctx: { params: { id: string } }) {
+export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const id = parseId(ctx.params);
+    const id = parseId(await ctx.params);
     if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
     const body = await request.json();
@@ -75,8 +75,8 @@ export async function PATCH(request: Request, ctx: { params: { id: string } }) {
   }
 }
 
-export async function DELETE(_request: Request, ctx: { params: { id: string } }) {
-  const id = parseId(ctx.params);
+export async function DELETE(_request: Request, ctx: { params: Promise<{ id: string }> }) {
+  const id = parseId(await ctx.params);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
   const { error } = await supabase.from('monitored_cards').delete().eq('id', id);

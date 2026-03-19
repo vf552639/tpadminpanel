@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Globe, BarChart3, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, Globe, BarChart3, Eye, LogOut, Shield } from 'lucide-react';
 import { Button } from './ui/button';
 
 export function Sidebar() {
@@ -13,6 +13,7 @@ export function Sidebar() {
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Domains', href: '/domains', icon: Globe },
         { name: 'Statistics', href: '/stats', icon: BarChart3 },
+        { name: 'Monitoring', href: '/monitoring', icon: Eye },
     ];
 
     const handleLogout = async () => {

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { CategorySelect } from '@/components/monitoring/CategorySelect';
+import { TpUrlResolver, TpResolvedData } from '@/components/monitoring/TpUrlResolver';
 
 type DomainSearchRow = {
   id: number;
@@ -21,18 +23,19 @@ export type CardFormValue = {
   category_id: number | null;
   category_slug: string;
   country_code: string;
-  keywordsText: string;
-  language_code: string;
-  location_code: string;
-  device: 'desktop' | 'mobile';
   is_active: boolean;
 };
 
-function parseKeywords(text: string) {
-  return text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
+type CountryOption = {
+  code: string;
+  name: string;
+};
+
+function mapCountry(row: any): CountryOption | null {
+  const code = String(row?.country_code || row?.code || row?.iso2 || '').trim().toUpperCase();
+  if (!code) return null;
+  const name = String(row?.name || row?.country_name || row?.title || code).trim();
+  return { code, name };
 }
 
 export function CardForm({
@@ -48,10 +51,6 @@ export function CardForm({
     category_id: null,
     category_slug: '',
     country_code: '',
-    keywordsText: '',
-    language_code: 'en',
-    location_code: '',
-    device: 'desktop',
     is_active: true,
   });
 
@@ -60,8 +59,48 @@ export function CardForm({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [countries, setCountries] = useState<CountryOption[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(false);
 
-  const keywords = useMemo(() => parseKeywords(value.keywordsText), [value.keywordsText]);
+  const countrySelectValue = value.country_code || 'none';
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        setCountriesLoading(true);
+        const res = await fetch('/api/monitoring/countries?limit=250', { signal: controller.signal });
+        const json = await res.json();
+        if (res.ok && Array.isArray(json.data)) {
+          const mapped = json.data.map(mapCountry).filter(Boolean) as CountryOption[];
+          const uniq = new Map<string, CountryOption>();
+          for (const c of mapped) uniq.set(c.code, c);
+          setCountries(Array.from(uniq.values()).sort((a, b) => a.name.localeCompare(b.name)));
+        } else {
+          setCountries([]);
+        }
+      } catch {
+        if (!controller.signal.aborted) setCountries([]);
+      } finally {
+        if (!controller.signal.aborted) setCountriesLoading(false);
+      }
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, []);
+
+  const applyResolved = (data: TpResolvedData) => {
+    setValue((v) => ({
+      ...v,
+      domain: data.domain || v.domain,
+      domain_id: data.domain_id ?? v.domain_id,
+      category_id: data.category_id ?? v.category_id,
+      category_slug: data.category_slug || v.category_slug,
+      country_code: data.country_code || v.country_code,
+    }));
+  };
 
   useEffect(() => {
     const q = value.domain.trim();
@@ -111,6 +150,14 @@ export function CardForm({
       setWarning('Domain is required');
       return;
     }
+    if (!value.category_id || !value.category_slug) {
+      setWarning('Category is required for Trustpilot position checks');
+      return;
+    }
+    if (!value.country_code) {
+      setWarning('Country / GEO is required for Trustpilot position checks');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -123,10 +170,10 @@ export function CardForm({
           category_id: value.category_id,
           category_slug: value.category_slug || null,
           country_code: value.country_code || null,
-          keywords,
-          language_code: value.language_code,
-          location_code: value.location_code ? Number(value.location_code) : null,
-          device: value.device,
+          keywords: [],
+          language_code: 'en',
+          location_code: null,
+          device: 'desktop',
           is_active: value.is_active,
         }),
       });
@@ -144,10 +191,6 @@ export function CardForm({
         category_id: null,
         category_slug: '',
         country_code: '',
-        keywordsText: '',
-        language_code: 'en',
-        location_code: '',
-        device: 'desktop',
         is_active: true,
       });
       setSuggestions([]);
@@ -169,7 +212,9 @@ export function CardForm({
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <div className="text-lg font-semibold">Add Card</div>
-          <div className="text-sm text-muted-foreground">Track Google SERP + Trustpilot category positions.</div>
+          <div className="text-sm text-muted-foreground">
+            Track Trustpilot category position. Google SERP will be available later as a separate tab.
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={onCancel} disabled={saving}>
@@ -184,6 +229,10 @@ export function CardForm({
       {warning && <div className="text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded">{warning}</div>}
 
       <div className="grid gap-4 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <TpUrlResolver onResolved={applyResolved} />
+        </div>
+
         <div className="relative">
           <label className="text-sm font-medium">Domain</label>
           <Input
@@ -217,73 +266,37 @@ export function CardForm({
         </div>
 
         <div>
-          <label className="text-sm font-medium">Keywords (Google)</label>
-          <textarea
-            value={value.keywordsText}
-            onChange={(e) => setValue((v) => ({ ...v, keywordsText: e.target.value }))}
-            className="mt-1 w-full min-h-[104px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            placeholder={'trustpilot {brand} reviews\n{brand} отзывы'}
+          <CategorySelect
+            value={value.category_id}
+            onChange={(id, slug) =>
+              setValue((v) => ({
+                ...v,
+                category_id: id,
+                category_slug: slug || v.category_slug,
+              }))
+            }
           />
-          <div className="mt-1 text-xs text-muted-foreground">{keywords.length} keyword(s)</div>
         </div>
 
         <div>
-          <label className="text-sm font-medium">Language</label>
-          <Select value={value.language_code} onValueChange={(val) => setValue((v) => ({ ...v, language_code: val }))}>
+          <label className="text-sm font-medium">Country / GEO</label>
+          <Select
+            value={countrySelectValue}
+            onValueChange={(v) => setValue((prev) => ({ ...prev, country_code: v === 'none' ? '' : v }))}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select language" />
+              <SelectValue placeholder={countriesLoading ? 'Loading countries…' : 'Select country'} />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">en</SelectItem>
-              <SelectItem value="de">de</SelectItem>
-              <SelectItem value="fr">fr</SelectItem>
-              <SelectItem value="es">es</SelectItem>
-              <SelectItem value="it">it</SelectItem>
-              <SelectItem value="nl">nl</SelectItem>
+            <SelectContent className="max-h-80">
+              <SelectItem value="none">Select country</SelectItem>
+              {countries.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.name} ({c.code})
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div>
-          <label className="text-sm font-medium">Device</label>
-          <Select value={value.device} onValueChange={(val) => setValue((v) => ({ ...v, device: val as any }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select device" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="desktop">desktop</SelectItem>
-              <SelectItem value="mobile">mobile</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="text-sm font-medium">Location code (DataForSEO)</label>
-          <Input
-            value={value.location_code}
-            onChange={(e) => setValue((v) => ({ ...v, location_code: e.target.value }))}
-            placeholder="2840"
-          />
-          <div className="mt-1 text-xs text-muted-foreground">Hint: 2840 = US</div>
-        </div>
-
-        <div className="grid gap-4 grid-cols-2">
-          <div>
-            <label className="text-sm font-medium">Trustpilot category slug</label>
-            <Input
-              value={value.category_slug}
-              onChange={(e) => setValue((v) => ({ ...v, category_slug: e.target.value }))}
-              placeholder="electronics_technology"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Country code</label>
-            <Input
-              value={value.country_code}
-              onChange={(e) => setValue((v) => ({ ...v, country_code: e.target.value }))}
-              placeholder="DE"
-            />
-          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Used in Trustpilot category URL as `?country=XX`.</div>
         </div>
 
         <div className="flex items-center gap-2 pt-6">

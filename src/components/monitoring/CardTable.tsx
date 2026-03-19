@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Pause, Play, RefreshCw, Trash2, Settings, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Pause, Play, RefreshCw, Trash2, Settings, ArrowDownRight } from 'lucide-react';
 
 export type MonitoredCardListItem = {
   id: number;
@@ -27,14 +27,12 @@ export function CardTable({
   data,
   loading,
   onToggleActive,
-  onRunSerp,
   onRunCategory,
   onDelete,
 }: {
   data: MonitoredCardListItem[];
   loading: boolean;
   onToggleActive: (id: number, isActive: boolean) => void;
-  onRunSerp: (id: number) => void;
   onRunCategory: (id: number) => void;
   onDelete: (id: number) => void;
 }) {
@@ -126,10 +124,6 @@ export function CardTable({
                         title={isActive ? 'Pause' : 'Resume'}
                       >
                         {isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => onRunSerp(row.id)} title="Run SERP check">
-                        <RefreshCw className="w-4 h-4" />
-                        <ArrowUpRight className="w-3 h-3 -ml-1" />
                       </Button>
                       <Button
                         variant="outline"

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CardForm } from '@/components/monitoring/CardForm';
 import { CardTable, MonitoredCardListItem } from '@/components/monitoring/CardTable';
+import { SerpStub } from '@/components/monitoring/SerpStub';
 import { Plus, Settings } from 'lucide-react';
 import Link from 'next/link';
 
@@ -13,6 +14,7 @@ export default function MonitoringPage() {
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [tab, setTab] = useState<'tp' | 'serp'>('tp');
 
   const load = async () => {
     setErr(null);
@@ -48,24 +50,6 @@ export default function MonitoringPage() {
       setCards((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: json.data.is_active } : c)));
     } catch (e: any) {
       setErr(e?.message || 'Failed to update card');
-    }
-  };
-
-  const runSerp = async (id: number) => {
-    setErr(null);
-    setMsg(null);
-    try {
-      const res = await fetch('/api/monitoring/check/serp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cardId: id }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'SERP check failed');
-      setMsg('SERP check completed');
-      await load();
-    } catch (e: any) {
-      setErr(e?.message || 'SERP check failed');
     }
   };
 
@@ -108,7 +92,9 @@ export default function MonitoringPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Monitoring</h1>
-          <p className="text-muted-foreground">Track card positions in Google SERP and Trustpilot categories.</p>
+          <p className="text-muted-foreground">
+            Track Trustpilot category positions now. Google SERP tracking will arrive as a separate tab.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
@@ -127,25 +113,49 @@ export default function MonitoringPage() {
       {msg && <div className="text-sm text-green-700 bg-green-50 border border-green-100 p-3 rounded">{msg}</div>}
       {err && <div className="text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded">{err}</div>}
 
-      {showForm && (
-        <CardForm
-          onCreated={async () => {
-            setShowForm(false);
-            setMsg('Created');
-            await load();
-          }}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
+      <div className="inline-flex items-center rounded-md border bg-white p-1 gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant={tab === 'tp' ? 'default' : 'ghost'}
+          onClick={() => setTab('tp')}
+        >
+          Trustpilot Position
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={tab === 'serp' ? 'default' : 'ghost'}
+          onClick={() => setTab('serp')}
+        >
+          Google SERP
+        </Button>
+      </div>
 
-      <CardTable
-        data={cards}
-        loading={loading}
-        onToggleActive={toggleActive}
-        onRunSerp={runSerp}
-        onRunCategory={runCategory}
-        onDelete={del}
-      />
+      {tab === 'tp' ? (
+        <>
+          {showForm && (
+            <CardForm
+              onCreated={async () => {
+                setShowForm(false);
+                setMsg('Created');
+                await load();
+              }}
+              onCancel={() => setShowForm(false)}
+            />
+          )}
+
+          <CardTable
+            data={cards}
+            loading={loading}
+            onToggleActive={toggleActive}
+            onRunCategory={runCategory}
+            onDelete={del}
+          />
+        </>
+      ) : (
+        <SerpStub />
+      )}
     </div>
   );
 }

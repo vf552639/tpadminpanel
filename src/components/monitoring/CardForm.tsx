@@ -498,10 +498,12 @@ export function CardForm({
         <div>
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium">Monitoring Depth</label>
-            <Info
-              className="h-4 w-4 text-muted-foreground"
+            <span
               title="Checks position in selected Trustpilot category. More levels mean more requests per run, but you will see position on each hierarchy level."
-            />
+              className="inline-flex items-center"
+            >
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </span>
           </div>
           <Select
             value={value.monitoring_depth}

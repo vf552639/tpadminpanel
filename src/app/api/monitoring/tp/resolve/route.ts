@@ -18,6 +18,14 @@ type ResolveResult = {
   tp_url: string;
 };
 
+type CategoryNode = {
+  id: number;
+  level: number | null;
+  category_name: string;
+  category_slug: string;
+  parent_id: number | null;
+};
+
 function extractDomainFromUrl(url: URL): string | null {
   const path = url.pathname || '';
   const idx = path.indexOf('/review/');
@@ -183,13 +191,7 @@ export async function POST(request: Request) {
     const domainData = domainRow.data;
     const categoryCandidates =
       categoryRows && 'data' in categoryRows && Array.isArray((categoryRows as any).data)
-        ? ((categoryRows as any).data as Array<{
-            id: number;
-            level: number | null;
-            category_name: string;
-            category_slug: string;
-            parent_id: number | null;
-          }>)
+        ? ((categoryRows as any).data as CategoryNode[])
         : [];
 
     const categoryData = [...categoryCandidates].sort((a, b) => (b.level || 0) - (a.level || 0))[0] || null;
@@ -202,11 +204,12 @@ export async function POST(request: Request) {
         if (visited.has(currentParentId)) break;
         visited.add(currentParentId);
 
-        const { data: parentRow } = await supabase
+        const parentResponse = await supabase
           .from('categories')
           .select('id,level,category_name,category_slug,parent_id')
           .eq('id', currentParentId)
           .maybeSingle();
+        const parentRow = (parentResponse.data as CategoryNode | null) ?? null;
         if (!parentRow) break;
 
         parentChain.push({

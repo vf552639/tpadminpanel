@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       domain_id: body.domain_id ?? null,
       category_id: body.category_id ?? null,
       category_slug: body.category_slug ? String(body.category_slug).trim() : null,
-      country_code: body.country_code ? String(body.country_code).trim().toUpperCase() : null,
+      country_code: body.country_code ? String(body.country_code).trim().toLowerCase() : null,
       keywords,
       language_code: body.language_code ? String(body.language_code).trim() : 'en',
       location_code: body.location_code ? Number(body.location_code) : null,

@@ -6,13 +6,26 @@ import { supabase } from '@/lib/supabase';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const country = (searchParams.get('country') || '').trim().toLowerCase();
     const q = (searchParams.get('q') || '').trim();
     const limit = Math.min(1000, Math.max(1, Number(searchParams.get('limit') || 500)));
 
-    let query = supabase.from('categories').select('*').limit(limit);
+    if (!country) {
+      return NextResponse.json({ data: [] });
+    }
+
+    let query = supabase
+      .from('categories')
+      .select('id,country,top_category_name,top_category_slug,display_category_name,display_category_slug')
+      .eq('country', country)
+      .order('top_category_name', { ascending: true })
+      .order('display_category_name', { ascending: true })
+      .limit(limit);
 
     if (q) {
-      query = query.or(`display_category_slug.ilike.%${q}%,category_slug.ilike.%${q}%`);
+      query = query.or(
+        `display_category_name.ilike.%${q}%,top_category_name.ilike.%${q}%,display_category_slug.ilike.%${q}%`
+      );
     }
 
     const { data, error } = await query;
@@ -22,15 +35,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Failed to load categories' }, { status: 500 });
     }
 
-    const mapped = (data || [])
-      .map((row: any) => ({
-        id: Number(row.id),
-        display_category_slug: String(row.display_category_slug || row.category_slug || '').trim(),
-        parent_id: row.parent_id ?? null,
-      }))
-      .filter((row: any) => Number.isFinite(row.id) && row.display_category_slug);
-
-    return NextResponse.json({ data: mapped });
+    return NextResponse.json({ data: data || [] });
   } catch (error) {
     console.error('Categories API error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

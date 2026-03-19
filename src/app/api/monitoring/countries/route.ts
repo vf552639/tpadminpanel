@@ -9,9 +9,14 @@ export async function GET(request: Request) {
     const q = (searchParams.get('q') || '').trim();
     const limit = Math.min(300, Math.max(1, Number(searchParams.get('limit') || 200)));
 
-    let query = supabase.from('countries').select('*').limit(limit);
+    let query = supabase
+      .from('countries')
+      .select('cn_code,cn_name,base_url')
+      .order('cn_name', { ascending: true })
+      .limit(limit);
+
     if (q) {
-      query = query.or(`code.ilike.%${q}%,name.ilike.%${q}%,country_code.ilike.%${q}%`);
+      query = query.or(`cn_code.ilike.%${q}%,cn_name.ilike.%${q}%`);
     }
 
     const { data, error } = await query;

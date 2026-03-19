@@ -27,16 +27,10 @@ export type CardFormValue = {
 };
 
 type CountryOption = {
-  code: string;
-  name: string;
+  cn_code: string;
+  cn_name: string;
+  base_url?: string | null;
 };
-
-function mapCountry(row: any): CountryOption | null {
-  const code = String(row?.country_code || row?.code || row?.iso2 || '').trim().toUpperCase();
-  if (!code) return null;
-  const name = String(row?.name || row?.country_name || row?.title || code).trim();
-  return { code, name };
-}
 
 export function CardForm({
   onCreated,
@@ -61,6 +55,13 @@ export function CardForm({
   const [saving, setSaving] = useState(false);
   const [countries, setCountries] = useState<CountryOption[]>([]);
   const [countriesLoading, setCountriesLoading] = useState(false);
+  const [detectedInfo, setDetectedInfo] = useState<{
+    business_name: string | null;
+    rating: number | null;
+    reviews_count: number | null;
+    category_slug: string | null;
+  } | null>(null);
+  const [detectWarning, setDetectWarning] = useState<string | null>(null);
 
   const countrySelectValue = value.country_code || 'none';
 
@@ -72,10 +73,14 @@ export function CardForm({
         const res = await fetch('/api/monitoring/countries?limit=250', { signal: controller.signal });
         const json = await res.json();
         if (res.ok && Array.isArray(json.data)) {
-          const mapped = json.data.map(mapCountry).filter(Boolean) as CountryOption[];
-          const uniq = new Map<string, CountryOption>();
-          for (const c of mapped) uniq.set(c.code, c);
-          setCountries(Array.from(uniq.values()).sort((a, b) => a.name.localeCompare(b.name)));
+          const mapped = json.data
+            .map((row: any) => ({
+              cn_code: String(row?.cn_code || '').trim().toLowerCase(),
+              cn_name: String(row?.cn_name || '').trim(),
+              base_url: row?.base_url ? String(row.base_url) : null,
+            }))
+            .filter((row: CountryOption) => row.cn_code && row.cn_name);
+          setCountries(mapped);
         } else {
           setCountries([]);
         }
@@ -91,15 +96,58 @@ export function CardForm({
     };
   }, []);
 
-  const applyResolved = (data: TpResolvedData) => {
+  const tryAutoSelectCategory = async (countryCode: string, slug: string | null) => {
+    if (!countryCode || !slug) return;
+    try {
+      const params = new URLSearchParams({
+        country: countryCode,
+        q: slug,
+        limit: '100',
+      });
+      const res = await fetch(`/api/monitoring/categories?${params.toString()}`);
+      const json = await res.json();
+      if (!res.ok || !Array.isArray(json.data)) return;
+      const exact = json.data.find(
+        (c: any) => String(c.display_category_slug || '').trim().toLowerCase() === slug.toLowerCase()
+      );
+      if (exact) {
+        setValue((v) => ({
+          ...v,
+          category_id: Number(exact.id),
+          category_slug: String(exact.display_category_slug || '').trim(),
+        }));
+        setDetectWarning(null);
+      } else {
+        setDetectWarning('Category not detected automatically. Please select manually.');
+      }
+    } catch {
+      setDetectWarning('Category not detected automatically. Please select manually.');
+    }
+  };
+
+  const applyResolved = async (data: TpResolvedData) => {
+    const normalizedCountry = (data.country_code || '').toLowerCase();
     setValue((v) => ({
       ...v,
       domain: data.domain || v.domain,
       domain_id: data.domain_id ?? v.domain_id,
-      category_id: data.category_id ?? v.category_id,
-      category_slug: data.category_slug || v.category_slug,
-      country_code: data.country_code || v.country_code,
+      category_id: null,
+      category_slug: data.category_slug || '',
+      country_code: normalizedCountry || v.country_code,
     }));
+    setDetectedInfo({
+      business_name: data.business_name ?? null,
+      rating: data.rating ?? null,
+      reviews_count: data.reviews_count ?? null,
+      category_slug: data.category_slug ?? null,
+    });
+    if (!data.category_slug) {
+      setDetectWarning('Category not detected automatically. Please select manually.');
+    } else {
+      setDetectWarning(null);
+    }
+
+    await tryAutoSelectCategory(normalizedCountry, data.category_slug);
   };
 
   useEffect(() => {
@@ -193,6 +241,8 @@ export function CardForm({
         country_code: '',
         is_active: true,
       });
+      setDetectedInfo(null);
+      setDetectWarning(null);
       setSuggestions([]);
     } catch (e: any) {
       setWarning(e?.message || 'Failed to create card');
@@ -227,11 +277,24 @@ export function CardForm({
       </div>
 
       {warning && <div className="text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded">{warning}</div>}
+      {detectWarning && (
+        <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded">{detectWarning}</div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <TpUrlResolver onResolved={applyResolved} />
         </div>
+
+        {detectedInfo && (
+          <div className="md:col-span-2 border rounded-md bg-slate-50 p-3 text-sm">
+            <div className="font-medium mb-1">Detected info</div>
+            <div className="text-muted-foreground">
+              Business: {detectedInfo.business_name || '-'} | Rating: {detectedInfo.rating ?? '-'} | Reviews:{' '}
+              {detectedInfo.reviews_count ?? '-'}
+            </div>
+          </div>
+        )}
 
         <div className="relative">
           <label className="text-sm font-medium">Domain</label>
@@ -266,23 +329,17 @@ export function CardForm({
         </div>
 
         <div>
-          <CategorySelect
-            value={value.category_id}
-            onChange={(id, slug) =>
-              setValue((v) => ({
-                ...v,
-                category_id: id,
-                category_slug: slug || v.category_slug,
-              }))
-            }
-          />
-        </div>
-
-        <div>
           <label className="text-sm font-medium">Country / GEO</label>
           <Select
             value={countrySelectValue}
-            onValueChange={(v) => setValue((prev) => ({ ...prev, country_code: v === 'none' ? '' : v }))}
+            onValueChange={(v) =>
+              setValue((prev) => ({
+                ...prev,
+                country_code: v === 'none' ? '' : v,
+                category_id: null,
+                category_slug: '',
+              }))
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder={countriesLoading ? 'Loading countries…' : 'Select country'} />
@@ -290,13 +347,27 @@ export function CardForm({
             <SelectContent className="max-h-80">
               <SelectItem value="none">Select country</SelectItem>
               {countries.map((c) => (
-                <SelectItem key={c.code} value={c.code}>
-                  {c.name} ({c.code})
+                <SelectItem key={c.cn_code} value={c.cn_code}>
+                  {c.cn_name} ({c.cn_code})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <div className="mt-1 text-xs text-muted-foreground">Used in Trustpilot category URL as `?country=XX`.</div>
+        </div>
+
+        <div>
+          <CategorySelect
+            country={value.country_code || null}
+            value={value.category_id}
+            onChange={(id, slug) =>
+              setValue((v) => ({
+                ...v,
+                category_id: id,
+                category_slug: slug || '',
+              }))
+            }
+          />
         </div>
 
         <div className="flex items-center gap-2 pt-6">

@@ -27,15 +27,19 @@ function extractDomainFromUrl(url: URL): string | null {
 
 function guessCountryFromUrl(url: URL): string | null {
   const host = url.hostname.toLowerCase();
-  // de.trustpilot.com -> DE, fr.trustpilot.com -> FR
+  if (host === 'www.trustpilot.com' || host === 'trustpilot.com') {
+    return 'usa/global';
+  }
+
+  // de.trustpilot.com -> de, fr.trustpilot.com -> fr
   const parts = host.split('.');
   if (parts.length >= 3 && parts[1] === 'trustpilot' && parts[2] === 'com') {
     const cc = parts[0];
-    if (cc.length === 2) return cc.toUpperCase();
+    if (cc.length === 2) return cc.toLowerCase();
   }
 
   const countryParam = url.searchParams.get('country');
-  if (countryParam && countryParam.length === 2) return countryParam.toUpperCase();
+  if (countryParam) return countryParam.toLowerCase();
 
   return null;
 }
@@ -151,11 +155,12 @@ export async function POST(request: Request) {
 
       const addr = business.address || {};
       if (typeof addr.addressCountry === 'string' && addr.addressCountry.length <= 3) {
-        countryFromJson = addr.addressCountry.toUpperCase();
+        countryFromJson = addr.addressCountry.toLowerCase();
       }
     }
 
     const categorySlug = extractCategorySlug(html);
+    const resolvedCountryCode = (countryFromUrl || countryFromJson || 'usa/global').toLowerCase();
 
     const [domainRow, categoryRow] = await Promise.all([
       supabase
@@ -167,7 +172,8 @@ export async function POST(request: Request) {
         ? supabase
             .from('categories')
             .select('*')
-            .or(`display_category_slug.eq.${categorySlug},category_slug.eq.${categorySlug}`)
+            .eq('country', resolvedCountryCode)
+            .eq('display_category_slug', categorySlug)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
     ]);
@@ -183,7 +189,7 @@ export async function POST(request: Request) {
       reviews_count: reviews,
       category_slug: categorySlug || null,
       category_id: categoryData?.id ?? domainData?.category_id ?? null,
-      country_code: (countryFromJson || countryFromUrl || null)?.toUpperCase() || null,
+      country_code: resolvedCountryCode || null,
       tp_url: url.toString(),
     };
 

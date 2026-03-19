@@ -44,7 +44,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     if (body.category_slug !== undefined)
       updates.category_slug = body.category_slug ? String(body.category_slug).trim() : null;
     if (body.country_code !== undefined)
-      updates.country_code = body.country_code ? String(body.country_code).trim().toUpperCase() : null;
+      updates.country_code = body.country_code ? String(body.country_code).trim().toLowerCase() : null;
     if (body.keywords !== undefined) {
       const keywords = Array.isArray(body.keywords)
         ? body.keywords.map((k: any) => String(k || '').trim()).filter((k: string) => k.length > 0)
